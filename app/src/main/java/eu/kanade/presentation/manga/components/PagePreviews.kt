@@ -3,6 +3,7 @@
 package eu.kanade.presentation.manga.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -72,7 +74,7 @@ private fun PagePreviewRow(
             .fillMaxWidth()
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.medium),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
     ) {
         items.forEach { page ->
             PagePreview(
@@ -175,10 +177,17 @@ fun PagePreview(
     page: PagePreview,
     onOpenPage: (Int) -> Unit,
 ) {
+    var scale by remember { mutableStateOf(1f) }
     Column(
         modifier
             .clip(MaterialTheme.shapes.small)
-            .clickable { onOpenPage(page.index - 1) },
+            .clickable { onOpenPage(page.index - 1) }
+            .graphicsLayer(scaleX = scale, scaleY = scale)
+            .pointerInput(Unit) {
+                detectTransformGestures { _, _, zoom, _ ->
+                    scale = (scale * zoom).coerceIn(1f, 3f)
+                }
+            },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween,
     ) {

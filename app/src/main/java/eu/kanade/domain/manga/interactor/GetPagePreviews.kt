@@ -7,6 +7,8 @@ import eu.kanade.tachiyomi.data.cache.PagePreviewCache
 import eu.kanade.tachiyomi.source.PagePreviewSource
 import eu.kanade.tachiyomi.source.Source
 import exh.source.getMainSource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.manga.model.Manga
 
@@ -28,6 +30,7 @@ class GetPagePreviews(
                     pagePreviewCache.putPageListToCache(manga, chapterIds, it)
                 }
             }
+            preloadImages(pagePreviews.pagePreviews.map { it.imageUrl })
             Result.Success(
                 pagePreviews.pagePreviews.map {
                     PagePreview(it.index, it.imageUrl, source.id)
@@ -37,6 +40,21 @@ class GetPagePreviews(
             )
         } catch (e: Exception) {
             Result.Error(e)
+        }
+    }
+
+    private suspend fun preloadImages(imageUrls: List<String>) {
+        withContext(Dispatchers.IO) {
+            imageUrls.forEach { imageUrl ->
+                if (!pagePreviewCache.isImageInCache(imageUrl)) {
+                    try {
+                        val imageSource = source.getImage(imageUrl)
+                        pagePreviewCache.putImageToCache(imageUrl, imageSource)
+                    } catch (e: Exception) {
+                        // Ignore errors during preloading
+                    }
+                }
+            }
         }
     }
 
