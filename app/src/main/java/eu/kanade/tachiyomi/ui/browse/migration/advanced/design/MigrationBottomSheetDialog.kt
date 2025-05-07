@@ -1,7 +1,5 @@
 package eu.kanade.tachiyomi.ui.browse.migration.advanced.design
 
-import android.graphics.drawable.ColorDrawable
-import android.os.Build
 import android.view.LayoutInflater
 import android.widget.CompoundButton
 import android.widget.RadioButton
@@ -83,26 +81,8 @@ fun MigrationBottomSheetDialog(
                 binding.HideNotFoundManga.thumbTintList = colorScheme.thumbTintList
                 binding.OnlyShowUpdates.thumbTintList = colorScheme.thumbTintList
 
-                with(binding.extraSearchParamText) {
-                    highlightColor = colorScheme.textHighlightColor
-                    backgroundTintList = colorScheme.editTextBackgroundTintList
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        textCursorDrawable = ColorDrawable(colorScheme.primary)
-                        textSelectHandle?.let { drawable ->
-                            drawable.setTint(colorScheme.primary)
-                            setTextSelectHandle(drawable)
-                        }
-                        textSelectHandleLeft?.let { drawable ->
-                            drawable.setTint(colorScheme.primary)
-                            setTextSelectHandleLeft(drawable)
-                        }
-                        textSelectHandleRight?.let { drawable ->
-                            drawable.setTint(colorScheme.primary)
-                            setTextSelectHandleRight(drawable)
-                        }
-                    }
-                }
+                colorScheme.setTextInputLayoutColor(binding.extraSearchParamInputLayout)
+                colorScheme.setEditTextColor(binding.extraSearchParamText)
                 // KMK <--
                 binding.root
             },
@@ -130,7 +110,7 @@ class MigrationBottomSheetDialogState(
         binding.migTracking.isChecked = MigrationFlags.hasTracks(flags)
         binding.migCustomCover.isChecked = MigrationFlags.hasCustomCover(flags)
         binding.migExtra.isChecked = MigrationFlags.hasExtra(flags)
-        binding.migDeleteDownloaded.isChecked = MigrationFlags.hasDeleteChapters(flags)
+        binding.migDeleteDownloaded.isChecked = MigrationFlags.hasDeleteDownloaded(flags)
 
         binding.migChapters.setOnCheckedChangeListener { _, _ -> setFlags(binding) }
         binding.migCategories.setOnCheckedChangeListener { _, _ -> setFlags(binding) }
@@ -140,9 +120,9 @@ class MigrationBottomSheetDialogState(
         binding.migDeleteDownloaded.setOnCheckedChangeListener { _, _ -> setFlags(binding) }
 
         binding.useSmartSearch.bindToPreference(preferences.smartMigration())
-        binding.extraSearchParamText.isVisible = false
+        binding.extraSearchParamInputLayout.isVisible = false
         binding.extraSearchParam.setOnCheckedChangeListener { _, isChecked ->
-            binding.extraSearchParamText.isVisible = isChecked
+            binding.extraSearchParamInputLayout.isVisible = isChecked
         }
         binding.sourceGroup.bindToPreference(preferences.useSourceWithMost())
 
@@ -163,8 +143,8 @@ class MigrationBottomSheetDialogState(
             preferences.hideNotFoundMigration().set(binding.HideNotFoundManga.isChecked)
             preferences.showOnlyUpdatesMigration().set(binding.OnlyShowUpdates.isChecked)
             onStartMigration.value(
-                if (binding.useSmartSearch.isChecked && binding.extraSearchParamText.text.isNotBlank()) {
-                    binding.extraSearchParamText.toString()
+                if (binding.useSmartSearch.isChecked && !binding.extraSearchParamText.text.isNullOrBlank()) {
+                    binding.extraSearchParamText.text.toString()
                 } else {
                     null
                 },
@@ -175,7 +155,7 @@ class MigrationBottomSheetDialogState(
         if (!fullSettings) {
             binding.useSmartSearch.isVisible = false
             binding.extraSearchParam.isVisible = false
-            binding.extraSearchParamText.isVisible = false
+            binding.extraSearchParamInputLayout.isVisible = false
             binding.sourceGroup.isVisible = false
             binding.skipStep.isVisible = false
             binding.migrateBtn.text = binding.root.context.stringResource(MR.strings.action_save)
@@ -190,7 +170,7 @@ class MigrationBottomSheetDialogState(
         if (binding.migTracking.isChecked) flags = flags or MigrationFlags.TRACK
         if (binding.migCustomCover.isChecked) flags = flags or MigrationFlags.CUSTOM_COVER
         if (binding.migExtra.isChecked) flags = flags or MigrationFlags.EXTRA
-        if (binding.migDeleteDownloaded.isChecked) flags = flags or MigrationFlags.DELETE_CHAPTERS
+        if (binding.migDeleteDownloaded.isChecked) flags = flags or MigrationFlags.DELETE_DOWNLOADED
         preferences.migrateFlags().set(flags)
     }
 

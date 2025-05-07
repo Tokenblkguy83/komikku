@@ -9,7 +9,6 @@ import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.core.preference.asState
-import eu.kanade.domain.manga.model.toDomainManga
 import eu.kanade.domain.source.interactor.GetExhSavedSearch
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.browse.SourceFeedUI
@@ -33,8 +32,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import mihon.domain.manga.model.toDomainManga
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
@@ -49,7 +48,6 @@ import tachiyomi.domain.source.interactor.InsertFeedSavedSearch
 import tachiyomi.domain.source.interactor.ReorderFeed
 import tachiyomi.domain.source.model.EXHSavedSearch
 import tachiyomi.domain.source.model.FeedSavedSearch
-import tachiyomi.domain.source.model.FeedSavedSearchUpdate
 import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.kmk.KMR
@@ -65,7 +63,7 @@ open class SourceFeedScreenModel(
     uiPreferences: UiPreferences = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
     private val getManga: GetManga = Injekt.get(),
-    val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
+    private val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
     private val getFeedSavedSearchBySourceId: GetFeedSavedSearchBySourceId = Injekt.get(),
     private val getSavedSearchBySourceIdFeed: GetSavedSearchBySourceIdFeed = Injekt.get(),
     private val countFeedSavedSearchBySourceId: CountFeedSavedSearchBySourceId = Injekt.get(),
@@ -156,25 +154,9 @@ open class SourceFeedScreenModel(
     }
 
     // KMK -->
-    fun changeOrder(feed: FeedSavedSearch, newOrder: Int) {
+    fun changeOrder(feed: FeedSavedSearch, newIndex: Int) {
         screenModelScope.launch {
-            reorderFeed.changeOrder(feed, newOrder, false)
-        }
-    }
-
-    fun sortAlphabetically() {
-        screenModelScope.launchNonCancellable {
-            reorderFeed.sortAlphabetically(
-                state.value.items
-                    .filterIsInstance<SourceFeedUI.SourceSavedSearch>()
-                    .sortedBy { feed -> feed.title }
-                    .mapIndexed { index, feed ->
-                        FeedSavedSearchUpdate(
-                            id = feed.feed.id,
-                            feedOrder = index.toLong(),
-                        )
-                    },
-            )
+            reorderFeed.changeOrder(feed, newIndex, false)
         }
     }
     // KMK <--
@@ -229,11 +211,9 @@ open class SourceFeedScreenModel(
                     }
 
                     val titles = withIOContext {
-                        page.map {
-                            // KMK -->
-                            it.toDomainManga(source.id)
-                            // KMK <--
-                        }
+                        page.map { it.toDomainManga(source.id) }
+                            .distinctBy { it.url }
+                            .let { networkToLocalManga(it) }
                     }
 
                     mutableState.update { state ->
@@ -267,10 +247,8 @@ open class SourceFeedScreenModel(
         return produceState(initialValue = initialManga) {
             getManga.subscribe(initialManga.url, initialManga.source)
                 .collectLatest { manga ->
+                    if (manga == null) return@collectLatest
                     value = manga
-                        // KMK -->
-                        ?: initialManga
-                    // KMK <--
                 }
         }
     }
@@ -423,8 +401,6 @@ open class SourceFeedScreenModel(
         data class FeedActions(
             val feedItem: SourceFeedUI.SourceSavedSearch,
         ) : Dialog()
-
-        data object SortAlphabetically : Dialog()
         // KMK <--
     }
 

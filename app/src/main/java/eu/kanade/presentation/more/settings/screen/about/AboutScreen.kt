@@ -36,9 +36,11 @@ import eu.kanade.tachiyomi.ui.more.WhatsNewScreen
 import eu.kanade.tachiyomi.util.CrashLogUtil
 import eu.kanade.tachiyomi.util.lang.toDateTimestampString
 import eu.kanade.tachiyomi.util.system.copyToClipboard
-import eu.kanade.tachiyomi.util.system.isDevFlavor
+import eu.kanade.tachiyomi.util.system.isDebugBuildType
+import eu.kanade.tachiyomi.util.system.isPreviewBuildType
 import eu.kanade.tachiyomi.util.system.isReleaseBuildType
 import eu.kanade.tachiyomi.util.system.toast
+import eu.kanade.tachiyomi.util.system.updaterEnabled
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.withIOContext
@@ -60,7 +62,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
-object AboutScreen : Screen() {
+class AboutScreen : Screen() {
     private fun readResolve(): Any = AboutScreen
 
     @Composable
@@ -76,10 +78,6 @@ object AboutScreen : Screen() {
         var isCheckingWhatsNew by remember { mutableStateOf(false) }
         var isCheckingWhatsComing by remember { mutableStateOf(false) }
         // KMK <--
-
-        // SY -->
-        var showWhatsNewDialog by remember { mutableStateOf(false) }
-        // SY <--
 
         Scaffold(
             topBar = { scrollBehavior ->
@@ -108,7 +106,7 @@ object AboutScreen : Screen() {
                     )
                 }
 
-                if (BuildConfig.INCLUDE_UPDATER) {
+                if (updaterEnabled) {
                     item {
                         TextPreferenceWidget(
                             title = stringResource(MR.strings.check_for_updates),
@@ -132,7 +130,7 @@ object AboutScreen : Screen() {
                                                     versionName = result.release.version,
                                                     changelogInfo = result.release.info,
                                                     releaseLink = result.release.releaseLink,
-                                                    downloadLink = result.release.getDownloadLink(),
+                                                    downloadLink = result.release.downloadLink,
                                                 )
                                                 navigator.push(updateScreen)
                                             },
@@ -185,7 +183,7 @@ object AboutScreen : Screen() {
                     )
                 }
 
-                if (isReleaseBuildType || isDevFlavor) {
+                if (isReleaseBuildType || isDebugBuildType) {
                     item {
                         TextPreferenceWidget(
                             title = stringResource(KMR.strings.whats_coming),
@@ -209,7 +207,7 @@ object AboutScreen : Screen() {
                                                     versionName = result.release.version,
                                                     changelogInfo = result.release.info,
                                                     releaseLink = result.release.releaseLink,
-                                                    downloadLink = result.release.getDownloadLink(),
+                                                    downloadLink = result.release.downloadLink,
                                                 )
                                                 navigator.push(updateScreen)
                                             },
@@ -267,7 +265,7 @@ object AboutScreen : Screen() {
                         LinkIcon(
                             label = "Discord",
                             icon = CustomIcons.Discord,
-                            url = "https://discord.gg/85jB7V5AJR",
+                            url = "https://discord.gg/Nft8MxpR",
                         )
                         // LinkIcon(
                         //     label = "X",
@@ -293,13 +291,6 @@ object AboutScreen : Screen() {
                 }
             }
         }
-
-        // SY -->
-        // KMK: Unused now
-        if (showWhatsNewDialog) {
-            WhatsNewDialog(onDismissRequest = { showWhatsNewDialog = false })
-        }
-        // SY <--
     }
 
     /**
@@ -341,76 +332,81 @@ object AboutScreen : Screen() {
         }
     }
 
-    // KMK -->
-    private suspend fun getReleaseNotes(
-        context: Context,
-        onAvailableUpdate: (GetApplicationRelease.Result.NewUpdate) -> Unit,
-        onFinish: () -> Unit,
-    ) {
-        val updateChecker = AppUpdateChecker()
-        withUIContext {
-            try {
-                when (val result = withIOContext { updateChecker.getReleaseNotes(context) }) {
-                    is GetApplicationRelease.Result.NewUpdate -> {
-                        onAvailableUpdate(result)
-                    }
-                    else -> {}
-                }
-            } catch (e: Exception) {
-                context.toast(e.message)
-                logcat(LogPriority.ERROR, e)
-            } finally {
-                onFinish()
-            }
-        }
-    }
-    // KMK <--
+    companion object {
+        // KMK -->
+        suspend fun getReleaseNotes(
+            context: Context,
+            onAvailableUpdate: (GetApplicationRelease.Result.NewUpdate) -> Unit,
+            onFinish: () -> Unit,
+        ) {
+            val updateChecker = AppUpdateChecker()
+            withUIContext {
+                try {
+                    when (val result = withIOContext { updateChecker.getReleaseNotes() }) {
+                        is GetApplicationRelease.Result.NewUpdate -> {
+                            onAvailableUpdate(result)
+                        }
 
-    fun getVersionName(withBuildDate: Boolean): String {
-        return when {
-            BuildConfig.DEBUG -> {
-                "Debug ${BuildConfig.COMMIT_SHA}".let {
-                    if (withBuildDate) {
-                        "$it (${getFormattedBuildTime()})"
-                    } else {
-                        it
+                        else -> {}
                     }
-                }
-            }
-            BuildConfig.PREVIEW -> {
-                "Beta r${BuildConfig.COMMIT_COUNT}".let {
-                    if (withBuildDate) {
-                        "$it (${BuildConfig.COMMIT_SHA}, ${getFormattedBuildTime()})"
-                    } else {
-                        "$it (${BuildConfig.COMMIT_SHA})"
-                    }
-                }
-            }
-            else -> {
-                "Stable ${BuildConfig.VERSION_NAME}".let {
-                    if (withBuildDate) {
-                        "$it (${getFormattedBuildTime()})"
-                    } else {
-                        it
-                    }
+                } catch (e: Exception) {
+                    context.toast(e.message)
+                    logcat(LogPriority.ERROR, e)
+                } finally {
+                    onFinish()
                 }
             }
         }
-    }
+        // KMK <--
 
-    internal fun getFormattedBuildTime(): String {
-        return try {
-            LocalDateTime.ofInstant(
-                Instant.parse(BuildConfig.BUILD_TIME),
-                ZoneId.systemDefault(),
-            )
-                .toDateTimestampString(
-                    UiPreferences.dateFormat(
-                        Injekt.get<UiPreferences>().dateFormat().get(),
-                    ),
+        fun getVersionName(withBuildDate: Boolean): String {
+            return when {
+                isDebugBuildType -> {
+                    "Debug ${BuildConfig.COMMIT_SHA}".let {
+                        if (withBuildDate) {
+                            "$it (${getFormattedBuildTime()})"
+                        } else {
+                            it
+                        }
+                    }
+                }
+
+                isPreviewBuildType -> {
+                    "Beta r${BuildConfig.COMMIT_COUNT}".let {
+                        if (withBuildDate) {
+                            "$it (${BuildConfig.COMMIT_SHA}, ${getFormattedBuildTime()})"
+                        } else {
+                            "$it (${BuildConfig.COMMIT_SHA})"
+                        }
+                    }
+                }
+
+                else -> {
+                    "Stable ${BuildConfig.VERSION_NAME}".let {
+                        if (withBuildDate) {
+                            "$it (${getFormattedBuildTime()})"
+                        } else {
+                            it
+                        }
+                    }
+                }
+            }
+        }
+
+        internal fun getFormattedBuildTime(): String {
+            return try {
+                LocalDateTime.ofInstant(
+                    Instant.parse(BuildConfig.BUILD_TIME),
+                    ZoneId.systemDefault(),
                 )
-        } catch (e: Exception) {
-            BuildConfig.BUILD_TIME
+                    .toDateTimestampString(
+                        UiPreferences.dateFormat(
+                            Injekt.get<UiPreferences>().dateFormat().get(),
+                        ),
+                    )
+            } catch (e: Exception) {
+                BuildConfig.BUILD_TIME
+            }
         }
     }
 }

@@ -4,7 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.SortByAlpha
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -13,7 +13,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalHapticFeedback
 import cafe.adriel.voyager.core.stack.StackEvent
@@ -23,25 +22,19 @@ import eu.kanade.presentation.browse.FeedAddDialog
 import eu.kanade.presentation.browse.FeedAddSearchDialog
 import eu.kanade.presentation.browse.FeedOrderScreen
 import eu.kanade.presentation.browse.FeedScreen
+import eu.kanade.presentation.browse.components.BulkFavoriteDialogs
 import eu.kanade.presentation.browse.components.FeedActionsDialog
-import eu.kanade.presentation.browse.components.FeedSortAlphabeticallyDialog
 import eu.kanade.presentation.browse.components.SourceFeedDeleteDialog
+import eu.kanade.presentation.browse.components.bulkSelectionButton
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.TabContent
-import eu.kanade.tachiyomi.ui.browse.AddDuplicateMangaDialog
-import eu.kanade.tachiyomi.ui.browse.AllowDuplicateDialog
 import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
-import eu.kanade.tachiyomi.ui.browse.ChangeMangaCategoryDialog
-import eu.kanade.tachiyomi.ui.browse.ChangeMangasCategoryDialog
-import eu.kanade.tachiyomi.ui.browse.RemoveMangaDialog
-import eu.kanade.tachiyomi.ui.browse.bulkSelectionButton
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.source.interactor.GetRemoteManga
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -59,7 +52,6 @@ fun feedTab(
     val state by screenModel.state.collectAsState()
 
     // KMK -->
-    val scope = rememberCoroutineScope()
     val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
     val showingFeedOrderScreen = rememberSaveable { mutableStateOf(false) }
 
@@ -99,14 +91,9 @@ fun feedTab(
             persistentListOf(
                 AppBar.Action(
                     title = stringResource(KMR.strings.action_sort_feed),
-                    icon = Icons.Outlined.SwapVert,
+                    icon = Icons.Outlined.Close,
                     iconTint = MaterialTheme.colorScheme.primary,
                     onClick = { showingFeedOrderScreen.value = false },
-                ),
-                AppBar.Action(
-                    title = stringResource(MR.strings.action_sort),
-                    icon = Icons.Outlined.SortByAlpha,
-                    onClick = { screenModel.showDialog(FeedScreenModel.Dialog.SortAlphabetically) },
                 ),
             )
         } else {
@@ -142,7 +129,7 @@ fun feedTab(
                     FeedOrderScreen(
                         state = state,
                         onClickDelete = screenModel::openDeleteDialog,
-                        changeOrder = screenModel::changeOrder,
+                        onChangeOrder = screenModel::changeOrder,
                     )
                 } else {
                     // KMK <--
@@ -177,27 +164,21 @@ fun feedTab(
                         // KMK -->
                         onLongClickFeed = screenModel::openActionsDialog,
                         // KMK <--
-                        onClickManga = {
+                        onClickManga = { manga ->
                             // KMK -->
-                            scope.launchIO {
-                                val manga = screenModel.networkToLocalManga.getLocal(it)
-                                if (bulkFavoriteState.selectionMode) {
-                                    bulkFavoriteScreenModel.toggleSelection(manga)
-                                } else {
-                                    // KMK <--
-                                    navigator.push(MangaScreen(manga.id, true))
-                                }
+                            if (bulkFavoriteState.selectionMode) {
+                                bulkFavoriteScreenModel.toggleSelection(manga)
+                            } else {
+                                // KMK <--
+                                navigator.push(MangaScreen(manga.id, true))
                             }
                         },
                         // KMK -->
-                        onLongClickManga = {
-                            scope.launchIO {
-                                val manga = screenModel.networkToLocalManga.getLocal(it)
-                                if (!bulkFavoriteState.selectionMode) {
-                                    bulkFavoriteScreenModel.addRemoveManga(manga, haptic)
-                                } else {
-                                    navigator.push(MangaScreen(manga.id, true))
-                                }
+                        onLongClickManga = { manga ->
+                            if (!bulkFavoriteState.selectionMode) {
+                                bulkFavoriteScreenModel.addRemoveManga(manga, haptic)
+                            } else {
+                                navigator.push(MangaScreen(manga.id, true))
                             }
                         },
                         selection = bulkFavoriteState.selection,
@@ -252,30 +233,15 @@ fun feedTab(
                             onClickDelete = { screenModel.openDeleteDialog(it) },
                         )
                     }
-                    is FeedScreenModel.Dialog.SortAlphabetically -> {
-                        FeedSortAlphabeticallyDialog(
-                            onDismissRequest = onDismissRequest,
-                            onSort = { screenModel.sortAlphabetically() },
-                        )
-                    }
                     // KMK <--
                 }
             }
 
             // KMK -->
-            when (bulkFavoriteState.dialog) {
-                is BulkFavoriteScreenModel.Dialog.AddDuplicateManga ->
-                    AddDuplicateMangaDialog(bulkFavoriteScreenModel)
-                is BulkFavoriteScreenModel.Dialog.RemoveManga ->
-                    RemoveMangaDialog(bulkFavoriteScreenModel)
-                is BulkFavoriteScreenModel.Dialog.ChangeMangaCategory ->
-                    ChangeMangaCategoryDialog(bulkFavoriteScreenModel)
-                is BulkFavoriteScreenModel.Dialog.ChangeMangasCategory ->
-                    ChangeMangasCategoryDialog(bulkFavoriteScreenModel)
-                is BulkFavoriteScreenModel.Dialog.AllowDuplicate ->
-                    AllowDuplicateDialog(bulkFavoriteScreenModel)
-                else -> {}
-            }
+            BulkFavoriteDialogs(
+                bulkFavoriteScreenModel = bulkFavoriteScreenModel,
+                dialog = bulkFavoriteState.dialog,
+            )
             // KMK <--
 
             val internalErrString = stringResource(MR.strings.internal_error)

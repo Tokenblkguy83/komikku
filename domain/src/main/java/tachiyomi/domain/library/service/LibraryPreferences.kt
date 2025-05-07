@@ -78,6 +78,8 @@ class LibraryPreferences(
         false,
     )
 
+    fun markDuplicateReadChapterAsRead() = preferenceStore.getStringSet("mark_duplicate_read_chapter_read", emptySet())
+
     // region Filter
 
     fun filterDownloaded() = preferenceStore.getEnum(
@@ -112,8 +114,6 @@ class LibraryPreferences(
         "pref_filter_library_lewd_v2",
         TriState.DISABLED,
     )
-
-    fun libraryReadDuplicateChapters() = preferenceStore.getBoolean("pref_library_mark_duplicate_chapters", false)
     // SY <--
 
     fun filterTracking(id: Int) = preferenceStore.getEnum(
@@ -126,6 +126,8 @@ class LibraryPreferences(
     // region Badges
 
     fun downloadBadge() = preferenceStore.getBoolean("display_download_badge", false)
+
+    fun unreadBadge() = preferenceStore.getBoolean("display_unread_badge", true)
 
     fun localBadge() = preferenceStore.getBoolean("display_local_badge", true)
 
@@ -144,12 +146,7 @@ class LibraryPreferences(
 
     // region Category
 
-    fun defaultCategory() = preferenceStore.getInt(
-        // KMK -->
-        DEFAULT_CATEGORY_PREF_KEY,
-        // KMK <--
-        -1,
-    )
+    fun defaultCategory() = preferenceStore.getInt(DEFAULT_CATEGORY_PREF_KEY, -1)
 
     fun lastUsedCategory() = preferenceStore.getInt(Preference.appStateKey("last_used_category"), 0)
 
@@ -163,19 +160,9 @@ class LibraryPreferences(
     fun showHiddenCategories() = preferenceStore.getBoolean("hide_hidden_categories", false)
     // KMK <--
 
-    fun updateCategories() = preferenceStore.getStringSet(
-        // KMK -->
-        LIBRARY_UPDATE_CATEGORIES_PREF_KEY,
-        // KMK <--
-        emptySet(),
-    )
+    fun updateCategories() = preferenceStore.getStringSet(LIBRARY_UPDATE_CATEGORIES_PREF_KEY, emptySet())
 
-    fun updateCategoriesExclude() = preferenceStore.getStringSet(
-        // KMK -->
-        LIBRARY_UPDATE_CATEGORIES_EXCLUDE_PREF_KEY,
-        // KMK <--
-        emptySet(),
-    )
+    fun updateCategoriesExclude() = preferenceStore.getStringSet(LIBRARY_UPDATE_CATEGORIES_EXCLUDE_PREF_KEY, emptySet())
 
     // endregion
 
@@ -268,10 +255,16 @@ class LibraryPreferences(
         const val MANGA_NON_READ = "manga_started"
         const val MANGA_OUTSIDE_RELEASE_PERIOD = "manga_outside_release_period"
 
-        // KMK -->
+        const val MARK_DUPLICATE_CHAPTER_READ_NEW = "new"
+        const val MARK_DUPLICATE_CHAPTER_READ_EXISTING = "existing"
+
         const val DEFAULT_CATEGORY_PREF_KEY = "default_category"
-        const val LIBRARY_UPDATE_CATEGORIES_PREF_KEY = "library_update_categories"
-        const val LIBRARY_UPDATE_CATEGORIES_EXCLUDE_PREF_KEY = "library_update_categories_exclude"
-        // KMK <--
+        private const val LIBRARY_UPDATE_CATEGORIES_PREF_KEY = "library_update_categories"
+        private const val LIBRARY_UPDATE_CATEGORIES_EXCLUDE_PREF_KEY = "library_update_categories_exclude"
+        val categoryPreferenceKeys = setOf(
+            DEFAULT_CATEGORY_PREF_KEY,
+            LIBRARY_UPDATE_CATEGORIES_PREF_KEY,
+            LIBRARY_UPDATE_CATEGORIES_EXCLUDE_PREF_KEY,
+        )
     }
 }

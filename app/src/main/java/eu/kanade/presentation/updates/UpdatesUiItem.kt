@@ -1,5 +1,8 @@
 package eu.kanade.presentation.updates
 
+import androidx.compose.animation.graphics.res.animatedVectorResource
+import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
+import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,8 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Circle
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -38,7 +39,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.ChapterDownloadIndicator
 import eu.kanade.presentation.manga.components.DotSeparatorText
@@ -46,12 +46,13 @@ import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.manga.components.RatioSwitchToPanorama
 import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.presentation.util.relativeTimeSpanString
+import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.updates.UpdatesItem
 import eu.kanade.tachiyomi.ui.updates.groupByDateAndManga
+import mihon.feature.upcoming.DateHeading
 import tachiyomi.domain.updates.model.UpdatesWithRelations
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.components.ListGroupHeader
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -107,13 +108,14 @@ internal fun LazyListScope.updatesUiItems(
     ) { item ->
         when (item) {
             is UpdatesUiModel.Header -> {
-                ListGroupHeader(
+                // KMK -->
+                DateHeading(
                     modifier = Modifier.animateItemFastScroll()
-                        // KMK -->
                         .padding(top = MaterialTheme.padding.extraSmall),
-                    // KMK <--
-                    text = relativeDateText(item.date),
+                    date = item.date,
+                    mangaCount = item.mangaCount,
                 )
+                // KMK <--
             }
             is UpdatesUiModel.Item -> {
                 val updatesItem = item.item
@@ -181,9 +183,11 @@ private fun UpdatesUiItem(
     expanded: Boolean,
     collapseToggle: (key: String) -> Unit,
     usePanoramaCover: Boolean,
-    coverRatio: MutableFloatState = remember { mutableFloatStateOf(1f) },
     // KMK <--
     modifier: Modifier = Modifier,
+    // KMK -->
+    coverRatio: MutableFloatState = remember { mutableFloatStateOf(1f) },
+    // KMK <--
 ) {
     val haptic = LocalHapticFeedback.current
     val textAlpha = if (update.read) DISABLED_ALPHA else 1f
@@ -200,7 +204,7 @@ private fun UpdatesUiItem(
             )
             .padding(
                 // KMK -->
-                vertical = MaterialTheme.padding.extraSmall,
+                vertical = if (isLeader) MaterialTheme.padding.extraSmall else 0.dp,
                 // KMK <--
                 horizontal = MaterialTheme.padding.medium,
             ),
@@ -262,13 +266,17 @@ private fun UpdatesUiItem(
                 .padding(horizontal = MaterialTheme.padding.medium)
                 .weight(1f),
         ) {
-            Text(
-                text = update.mangaTitle,
-                maxLines = 1,
-                style = MaterialTheme.typography.bodyMedium,
-                color = LocalContentColor.current.copy(alpha = textAlpha),
-                overflow = TextOverflow.Ellipsis,
-            )
+            // KMK -->
+            if (isLeader) {
+                // KMK <--
+                Text(
+                    text = update.mangaTitle,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = LocalContentColor.current.copy(alpha = textAlpha),
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 var textHeight by remember { mutableIntStateOf(0) }
@@ -342,12 +350,16 @@ fun CollapseButton(
 ) {
     Box(
         modifier = modifier
-            .size(IndicatorSize),
-        contentAlignment = Alignment.Center,
+            .size(IndicatorSize + MaterialTheme.padding.extraSmall),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        IconButton(onClick = { collapseToggle() }) {
+        IconButton(
+            onClick = { collapseToggle() },
+            modifier = Modifier.size(IndicatorSize),
+        ) {
+            val image = AnimatedImageVector.animatedVectorResource(R.drawable.anim_caret_down)
             Icon(
-                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                painter = rememberAnimatedVectorPainter(image, !expanded),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -355,7 +367,8 @@ fun CollapseButton(
     }
 }
 
-private val IndicatorSize = 18.dp
-private val UpdateItemPanoramaWidth = 126.dp
+private val IndicatorSize = MaterialTheme.padding.large
+
+private val UpdateItemPanoramaWidth = 126.dp // Book cover
 private val UpdateItemWidth = 56.dp
 // KMK <--

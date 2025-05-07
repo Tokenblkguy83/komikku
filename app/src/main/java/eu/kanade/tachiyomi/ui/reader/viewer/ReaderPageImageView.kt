@@ -69,7 +69,7 @@ open class ReaderPageImageView @JvmOverloads constructor(
     private var config: Config? = null
 
     var onImageLoaded: (() -> Unit)? = null
-    var onImageLoadError: (() -> Unit)? = null
+    var onImageLoadError: ((Throwable?) -> Unit)? = null
     var onScaleChanged: ((newScale: Float) -> Unit)? = null
     var onViewClicked: (() -> Unit)? = null
 
@@ -85,8 +85,8 @@ open class ReaderPageImageView @JvmOverloads constructor(
     }
 
     @CallSuper
-    open fun onImageLoadError() {
-        onImageLoadError?.invoke()
+    open fun onImageLoadError(error: Throwable?) {
+        onImageLoadError?.invoke(error)
     }
 
     @CallSuper
@@ -114,7 +114,7 @@ open class ReaderPageImageView @JvmOverloads constructor(
                         }
 
                         override fun onImageLoadError(e: Exception) {
-                            onImageLoadError()
+                            onImageLoadError(e)
                         }
                     },
                 )
@@ -187,6 +187,18 @@ open class ReaderPageImageView @JvmOverloads constructor(
      */
     fun canPanRight(): Boolean = canPan { it.right }
 
+    // KMK -->
+    /**
+     * Check if the image can be panned up
+     */
+    fun canPanUp(): Boolean = canPan { it.top }
+
+    /**
+     * Check if the image can be panned down
+     */
+    fun canPanDown(): Boolean = canPan { it.bottom }
+    // KMK <--
+
     /**
      * Check whether the image can be panned.
      * @param fn a function that returns the direction to check for
@@ -214,6 +226,22 @@ open class ReaderPageImageView @JvmOverloads constructor(
     fun panRight() {
         pan { center, view -> center.also { it.x += view.width / view.scale } }
     }
+
+    // KMK -->
+    /**
+     * Pans the image down by a screen's height worth.
+     */
+    fun panDown() {
+        pan { center, view -> center.also { it.y += view.height / view.scale } }
+    }
+
+    /**
+     * Pans the image up by a screen's height worth.
+     */
+    fun panUp() {
+        pan { center, view -> center.also { it.y -= view.height / view.scale } }
+    }
+    // KMK <--
 
     /**
      * Pans the image.
@@ -290,7 +318,7 @@ open class ReaderPageImageView @JvmOverloads constructor(
                 }
 
                 override fun onImageLoadError(e: Exception) {
-                    this@ReaderPageImageView.onImageLoadError()
+                    this@ReaderPageImageView.onImageLoadError(e)
                 }
             },
         )
@@ -318,8 +346,10 @@ open class ReaderPageImageView @JvmOverloads constructor(
                             setImage(ImageSource.bitmap(image.bitmap))
                             isVisible = true
                         },
-                        onError = {
-                            onImageLoadError()
+                    )
+                    .listener(
+                        onError = { _, result ->
+                            onImageLoadError(result.throwable)
                         },
                     )
                     .size(ViewSizeResolver(this@ReaderPageImageView))
@@ -395,8 +425,10 @@ open class ReaderPageImageView @JvmOverloads constructor(
                     isVisible = true
                     this@ReaderPageImageView.onImageLoaded()
                 },
-                onError = {
-                    this@ReaderPageImageView.onImageLoadError()
+            )
+            .listener(
+                onError = { _, result ->
+                    onImageLoadError(result.throwable)
                 },
             )
             .crossfade(false)

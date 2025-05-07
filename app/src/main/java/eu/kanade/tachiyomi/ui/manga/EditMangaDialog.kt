@@ -3,7 +3,6 @@ package eu.kanade.tachiyomi.ui.manga
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.AdapterView
@@ -359,23 +358,7 @@ private fun onViewCreated(
         binding.thumbnailUrl,
         binding.mangaDescription,
     ).forEach {
-        it.setTextColor(colorScheme.textColor)
-        it.highlightColor = colorScheme.textHighlightColor
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            it.textSelectHandle?.let { drawable ->
-                drawable.setTint(colorScheme.iconColor)
-                it.setTextSelectHandle(drawable)
-            }
-            it.textSelectHandleLeft?.let { drawable ->
-                drawable.setTint(colorScheme.iconColor)
-                it.setTextSelectHandleLeft(drawable)
-            }
-            it.textSelectHandleRight?.let { drawable ->
-                drawable.setTint(colorScheme.iconColor)
-                it.setTextSelectHandleRight(drawable)
-            }
-        }
+        colorScheme.setEditTextColor(it)
     }
     listOf(
         binding.titleOutline,
@@ -384,11 +367,7 @@ private fun onViewCreated(
         binding.thumbnailUrlOutline,
         binding.mangaDescriptionOutline,
     ).forEach {
-        it.boxStrokeColor = colorScheme.iconColor
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            it.cursorColor = ColorStateList.valueOf(colorScheme.iconColor)
-        }
+        colorScheme.setTextInputLayoutColor(it)
     }
 
     binding.autofillFromTracker.setTextColor(colorScheme.btnTextColor)
@@ -409,8 +388,8 @@ private fun onViewCreated(
 }
 
 private suspend fun getTrackers(manga: Manga, binding: EditMangaDialogBinding, context: Context, getTracks: GetTracks, trackerManager: TrackerManager, tracks: MutableState<List<Pair<Track, Tracker>>>, showTrackerSelectionDialogue: MutableState<Boolean>) {
-    tracks.value = getTracks.await(manga.id).map { track ->
-        track to trackerManager.get(track.trackerId)!!
+    tracks.value = getTracks.await(manga.id).mapNotNull { track ->
+        track to (trackerManager.get(track.trackerId) ?: return@mapNotNull null)
     }
         .filterNot { (_, tracker) -> tracker is EnhancedTracker }
 
@@ -435,11 +414,11 @@ private suspend fun autofillFromTracker(binding: EditMangaDialogBinding, track: 
     try {
         val trackerMangaMetadata = tracker.getMangaMetadata(track)
 
-        setTextIfNotBlank(binding.title::setText, trackerMangaMetadata?.title)
-        setTextIfNotBlank(binding.mangaAuthor::setText, trackerMangaMetadata?.authors)
-        setTextIfNotBlank(binding.mangaArtist::setText, trackerMangaMetadata?.artists)
-        setTextIfNotBlank(binding.thumbnailUrl::setText, trackerMangaMetadata?.thumbnailUrl)
-        setTextIfNotBlank(binding.mangaDescription::setText, trackerMangaMetadata?.description)
+        setTextIfNotBlank(binding.title::setText, trackerMangaMetadata.title)
+        setTextIfNotBlank(binding.mangaAuthor::setText, trackerMangaMetadata.authors)
+        setTextIfNotBlank(binding.mangaArtist::setText, trackerMangaMetadata.artists)
+        setTextIfNotBlank(binding.thumbnailUrl::setText, trackerMangaMetadata.thumbnailUrl)
+        setTextIfNotBlank(binding.mangaDescription::setText, trackerMangaMetadata.description)
     } catch (e: Throwable) {
         tracker.logcat(LogPriority.ERROR, e)
         binding.root.context.toast(

@@ -62,6 +62,7 @@ import eu.kanade.presentation.components.RestoringBannerBackgroundColor
 import eu.kanade.presentation.components.SyncingBannerBackgroundColor
 import eu.kanade.presentation.components.UpdatingBannerBackgroundColor
 import eu.kanade.presentation.more.settings.screen.ConfigureExhDialog
+import eu.kanade.presentation.more.settings.screen.about.AboutScreen.Companion.getReleaseNotes
 import eu.kanade.presentation.more.settings.screen.about.WhatsNewDialog
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionReposScreen
 import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
@@ -86,10 +87,13 @@ import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.more.NewUpdateScreen
 import eu.kanade.tachiyomi.ui.more.OnboardingScreen
+import eu.kanade.tachiyomi.ui.more.WhatsNewScreen
 import eu.kanade.tachiyomi.util.system.dpToPx
+import eu.kanade.tachiyomi.util.system.isDebugBuildType
 import eu.kanade.tachiyomi.util.system.isNavigationBarNeedsScrim
 import eu.kanade.tachiyomi.util.system.isPreviewBuildType
 import eu.kanade.tachiyomi.util.system.isReleaseBuildType
+import eu.kanade.tachiyomi.util.system.updaterEnabled
 import eu.kanade.tachiyomi.util.view.setComposeContent
 import exh.debug.DebugToggles
 import exh.eh.EHentaiUpdateWorker
@@ -104,6 +108,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import mihon.core.migration.Migrator
+import mihon.core.migration.Migrator.scope
 import tachiyomi.core.common.Constants
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
@@ -194,7 +199,7 @@ class MainActivity : BaseActivity() {
 
         // SY -->
         @Suppress("KotlinConstantConditions")
-        val hasDebugOverlay = (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "releaseTest")
+        val hasDebugOverlay = (isDebugBuildType || BuildConfig.BUILD_TYPE == "releaseTest")
         // SY <--
 
         setComposeContent {
@@ -358,12 +363,12 @@ class MainActivity : BaseActivity() {
                 0,
             )
             val previewCurrentVersion = BuildConfig.COMMIT_COUNT.toInt()
+            var isCheckingWhatsNew by remember { mutableStateOf(false) }
             // KMK <--
 
             var showChangelog by remember {
                 mutableStateOf(
                     // KMK -->
-                    // BuildConfig.DEBUG ||
                     isReleaseBuildType &&
                         didMigration ||
                         isPreviewBuildType &&
@@ -372,9 +377,35 @@ class MainActivity : BaseActivity() {
                 )
             }
             if (showChangelog) {
-                // SY -->
-                WhatsNewDialog(onDismissRequest = { showChangelog = false })
-                // SY <--
+                // KMK -->
+                WhatsNewDialog(
+                    onDismissRequest = { showChangelog = false },
+                    onOpenWhatsNew = {
+                        showChangelog = false
+                        if (!isCheckingWhatsNew) {
+                            scope.launch {
+                                isCheckingWhatsNew = true
+
+                                getReleaseNotes(
+                                    context = context,
+                                    onAvailableUpdate = { result ->
+                                        val whatsNewScreen = WhatsNewScreen(
+                                            currentVersion = BuildConfig.VERSION_NAME,
+                                            versionName = result.release.version,
+                                            changelogInfo = result.release.info,
+                                            releaseLink = result.release.releaseLink,
+                                        )
+                                        navigator?.push(whatsNewScreen)
+                                    },
+                                    onFinish = {
+                                        isCheckingWhatsNew = false
+                                    },
+                                )
+                            }
+                        }
+                    },
+                )
+                // KMK <--
             }
             // KMK -->
             previewLastVersion.set(previewCurrentVersion)
@@ -435,7 +466,7 @@ class MainActivity : BaseActivity() {
 
         // App updates
         LaunchedEffect(Unit) {
-            if (BuildConfig.INCLUDE_UPDATER) {
+            if (updaterEnabled) {
                 try {
                     // KMK -->
                     AppUpdateJob.setupTask(context)
@@ -446,7 +477,7 @@ class MainActivity : BaseActivity() {
                             versionName = result.release.version,
                             changelogInfo = result.release.info,
                             releaseLink = result.release.releaseLink,
-                            downloadLink = result.release.getDownloadLink(),
+                            downloadLink = result.release.downloadLink,
                         )
                         navigator.push(updateScreen)
                     }

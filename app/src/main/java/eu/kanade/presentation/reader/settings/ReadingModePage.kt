@@ -16,6 +16,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsScreenModel
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonViewer
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.components.CheckboxItem
 import tachiyomi.presentation.core.components.HeadingItem
@@ -111,6 +112,13 @@ private fun ColumnScope.PagerViewerSettings(screenModel: ReaderSettingsScreenMod
     }
     // SY <--
 
+    // KMK -->
+    CheckboxItem(
+        label = stringResource(KMR.strings.pref_viewer_nav_smaller_tap_zone),
+        pref = screenModel.preferences.smallerTapZone(),
+    )
+    // KMK <--
+
     CheckboxItem(
         label = stringResource(MR.strings.pref_crop_borders),
         pref = screenModel.preferences.cropBorders(),
@@ -193,16 +201,22 @@ private fun ColumnScope.WebtoonViewerSettings(screenModel: ReaderSettingsScreenM
 
     val webtoonSidePadding by screenModel.preferences.webtoonSidePadding().collectAsState()
     SliderItem(
-        label = stringResource(MR.strings.pref_webtoon_side_padding),
-        min = ReaderPreferences.WEBTOON_PADDING_MIN,
-        max = ReaderPreferences.WEBTOON_PADDING_MAX,
         value = webtoonSidePadding,
+        valueRange = ReaderPreferences.let { it.WEBTOON_PADDING_MIN..it.WEBTOON_PADDING_MAX },
+        label = stringResource(MR.strings.pref_webtoon_side_padding),
         valueText = numberFormat.format(webtoonSidePadding / 100f),
         onChange = {
             screenModel.preferences.webtoonSidePadding().set(it)
         },
         pillColor = MaterialTheme.colorScheme.surfaceContainerHighest,
     )
+
+    // KMK -->
+    CheckboxItem(
+        label = stringResource(KMR.strings.pref_viewer_nav_smaller_tap_zone),
+        pref = screenModel.preferences.smallerTapZone(),
+    )
+    // KMK <--
 
     CheckboxItem(
         label = stringResource(MR.strings.pref_crop_borders),

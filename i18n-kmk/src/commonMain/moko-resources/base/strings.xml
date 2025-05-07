@@ -10,7 +10,7 @@
     <string name="action_move_up">Move up</string>
     <string name="action_move_down">Move down</string>
     <string name="action_confirm_color">Confirm Color</string>
-    <string name="action_remove_merged">Remove merged entries?</string>
+    <string name="action_remove_merged">Remove original entries from library?</string>
     <string name="action_hide">Hide</string>
     <string name="action_show_hidden_categories">Show hidden categories</string>
     <string name="action_panorama_cover">Panorama cover</string>
@@ -19,6 +19,7 @@
     <string name="action_copy_to_clipboard_first_page">Copy first page to clipboard</string>
     <string name="action_copy_to_clipboard_second_page">Copy second page to clipboard</string>
     <string name="action_copy_to_clipboard_combined_page">Copy combined page to clipboard</string>
+    <string name="pref_viewer_nav_smaller_tap_zone">Smaller tap zones</string>
     <!-- Preferences -->
       <!-- Appearance section -->
     <string name="pref_custom_theme_style">Custom theme style</string>
@@ -38,6 +39,8 @@
     <string name="pref_panorama_cover_summary">Show cover in landscape mode if it\'s a wide image</string>
     <string name="pref_panorama_cover_flow">Panorama Cover Flow</string>
     <string name="pref_panorama_cover_flow_summary">Show panorama cover in Global Search &amp; Suggestions</string>
+    <string name="pref_top_align_cover">Align Cover to Top</string>
+    <string name="pref_top_align_cover_summary">Show the cover aligned to the top alongside manga info</string>
     <string name="action_display_comfortable_grid_panorama">Panorama comfortable grid</string>
     <string name="pref_expand_related_mangas">Expand Suggestions</string>
     <string name="pref_expand_related_mangas_summary">If turned off, Suggestions won\'t automatically load &amp; show expanded</string>
@@ -84,7 +87,7 @@
     <string name="download_cache_renew_interval_6hour">6 hours</string>
     <string name="download_cache_renew_interval_12hour">12 hours</string>
     <string name="download_cache_renew_interval_24hour">1 day</string>
-    <string name="download_cache_renew_interval_info">If set to "manual", either refresh each manga or using the "Invalidate downloads index" action in "Advanced"</string>
+    <string name="download_cache_renew_interval_info">If set to "manual", either refresh each manga or using the "Reindex downloads" action in "Advanced"</string>
     <!-- Tracking section -->
     <string name="pref_auto_sync_progress_from_trackers">Auto sync progress from Trackers</string>
     <string name="sync_progress_from_trackers_up_to_chapter">Sync progress from Trackers up to chapter %d</string>
@@ -148,4 +151,5 @@
     <string name="migrating_all_entries">Migrating all entries from source</string>
     <!-- Misc -->
     <string name="label_to_be_updated">To be updated</string>
+    <string name="batch_add_description">Support: MangaDex, E-H, ExH, nH, 8Muses, Tsumino</string>
 </resources>

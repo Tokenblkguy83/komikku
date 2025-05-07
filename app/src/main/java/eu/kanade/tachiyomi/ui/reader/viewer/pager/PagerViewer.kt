@@ -116,11 +116,7 @@ abstract class PagerViewer(
         pager.offscreenPageLimit = 1
         pager.id = R.id.reader_pager
         pager.adapter = adapter
-        pager.addOnPageChangeListener(
-            // SY -->
-            pagerListener,
-            // SY <--
-        )
+        pager.addOnPageChangeListener(pagerListener)
         pager.tapListener = { event ->
             val viewPosition = IntArray(2)
             pager.getLocationOnScreen(viewPosition)
@@ -302,6 +298,9 @@ abstract class PagerViewer(
      * Sets the active [chapters] on this pager.
      */
     private fun setChaptersInternal(chapters: ViewerChapters) {
+        // Remove listener so the change in item doesn't trigger it
+        pager.removeOnPageChangeListener(pagerListener)
+
         val forceTransition =
             config.alwaysShowChapterTransition ||
                 adapter.joinedItems.getOrNull(pager.currentItem)?.first is ChapterTransition
@@ -314,6 +313,10 @@ abstract class PagerViewer(
             moveToPage(pages[min(chapters.currChapter.requestedPage, pages.lastIndex)])
             pager.isVisible = true
         }
+
+        pager.addOnPageChangeListener(pagerListener)
+        // Manually call onPageChange to update the UI
+        onPageChange(pager.currentItem)
     }
 
     /**
@@ -384,17 +387,31 @@ abstract class PagerViewer(
     }
 
     /**
-     * Moves to the page at the top (or previous).
+     * Pans to the top of the page or if already on the top moves to the previous page.
      */
     protected open fun moveUp() {
-        moveToPrevious()
+        // KMK -->
+        val holder = (currentPage as? ReaderPage)?.let(::getPageHolder)
+        if (holder != null && holder.canPanUp()) {
+            holder.panUp()
+        } else {
+            // KMK <--
+            moveToPrevious()
+        }
     }
 
     /**
-     * Moves to the page at the bottom (or next).
+     * Pans to the bottom of the page or if already on the bottom moves to the next page.
      */
     protected open fun moveDown() {
-        moveToNext()
+        // KMK -->
+        val holder = (currentPage as? ReaderPage)?.let(::getPageHolder)
+        if (holder != null && holder.canPanDown()) {
+            holder.panDown()
+        } else {
+            // KMK <--
+            moveToNext()
+        }
     }
 
     /**
